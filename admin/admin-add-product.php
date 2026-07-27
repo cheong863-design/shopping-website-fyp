@@ -1,16 +1,13 @@
 <?php
-// 1. 初始化
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 include '../includes/db.php'; 
 
-// 核心安全拦截
 if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) { 
     header("Location: ../login.php"); 
     exit(); 
 }
 $admin_name = isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : 'Admin';
 
-// 动态读取数据库中现有的所有分类
 $cat_query = mysqli_query($conn, "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
 $existing_categories = [];
 while($row = mysqli_fetch_assoc($cat_query)) {
@@ -27,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
     $price = floatval($_POST['base_price']);
     $d_price = !empty($_POST['discount_price']) ? floatval($_POST['discount_price']) : "NULL";
     
-    // 核心逻辑：处理“新分类”
     $category = mysqli_real_escape_string($conn, trim($_POST['category']));
     if ($category === '___NEW_CATEGORY___') {
         $category = mysqli_real_escape_string($conn, trim($_POST['new_category_name']));
@@ -37,14 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
     $status = isset($_POST['draft_mode']) ? 'draft' : 'active';
     $stock = isset($_POST['stock']) ? intval($_POST['stock']) : 0;
 
-    // 检查重复
     $check_sql = "SELECT id FROM products WHERE product_code = '$product_code' OR LOWER(name) = LOWER('$name')";
     $check_res = mysqli_query($conn, $check_sql);
 
     if (mysqli_num_rows($check_res) > 0) {
         $error_msg = "A product with the code <strong>'$product_code'</strong> or the name <strong>'$name'</strong> already exists. Please check your inventory or use a unique code.";
     } else {
-        // 图片处理
         $image_name = "default-product.png";
         if (!empty($_FILES['product_image']['name'])) {
             $target_dir = "../assets/images/"; 
@@ -52,7 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             move_uploaded_file($_FILES['product_image']['tmp_name'], $target_dir . $image_name);
         }
 
-        // 插入数据库
         $sql = "INSERT INTO products (product_code, name, description, price, discount_price, category, tags, image, status, stock) 
                 VALUES ('$product_code', '$name', '$desc', $price, $d_price, '$category', '$tags', '$image_name', '$status', $stock)";
         
@@ -74,30 +67,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
     <title>Add New Product - FAIFA Admin</title>
     <link rel="stylesheet" href="../assets/css/admin-style.css">
     <style>
-        /* ========== 顶级 SaaS 动画系统 ========== */
         
-        /* 1. 物理回弹进场 */
         @keyframes elasticUp {
             0% { opacity: 0; transform: translateY(40px) scale(0.96); }
             60% { opacity: 1; transform: translateY(-5px) scale(1.01); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* 2. 按钮流光扫过 (Shimmer) */
         @keyframes btnShine {
             0% { left: -100%; opacity: 0; }
             20% { left: 100%; opacity: 1; }
             100% { left: 100%; opacity: 0; }
         }
-
-        /* 3. 错误提示框抖动 */
         @keyframes shakeError {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
-
-        /* ========== 核心布局与卡片 ========== */
         .admin-header { 
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; 
             animation: elasticUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -115,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
         }
         .admin-card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(0,0,0,0.05); }
         
-        /* ✨ 错落进场延迟编排 */
         .main-col .admin-card:nth-child(1) { animation-delay: 0.15s; }
         .main-col .admin-card:nth-child(2) { animation-delay: 0.25s; }
         .side-col .admin-card:nth-child(1) { animation-delay: 0.2s; }
@@ -123,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
 
         .admin-card h3 { margin: 0 0 25px 0; font-size: 16px; color: #0f172a; font-weight: 700; border-bottom: 1px dashed #e2e8f0; padding-bottom: 15px; }
 
-        /* ========== 深度交互表单 (Deep Focus) ========== */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         
         .form-group { position: relative; margin-bottom: 20px; }
@@ -135,7 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-sizing: border-box; 
         }
         
-        /* Focus 状态联动 */
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { 
             border-color: #ff8002; background: #fff; 
             box-shadow: 0 8px 20px rgba(255,128,2,0.08), 0 0 0 4px rgba(255,128,2,0.1); 
@@ -143,7 +126,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
         }
         .form-group:focus-within label { color: #ff8002; }
 
-        /* ========== 上传区域魔法 (Magnetic Upload) ========== */
         .upload-area {
             border: 2px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; 
             text-align: center; padding: 40px 20px; transition: all 0.3s ease; 
@@ -156,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
         .upload-label { cursor: pointer; display: block; color: #64748b; font-weight: 600; font-size: 14px; transition: transform 0.3s ease; }
         .upload-area:hover .upload-label { transform: scale(1.05); color: #ff8002; }
 
-        /* ========== 按钮系统 ========== */
         .header-actions { display: flex; gap: 15px; }
         .btn-discard { 
             background: #fff; color: #475569; border: 1px solid #e2e8f0; padding: 12px 24px; 
@@ -177,7 +158,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             transform: skewX(-20deg); animation: btnShine 3s infinite 1.5s;
         }
 
-        /* 错误提示 */
         .alert-error { 
             background: #fee2e2; color: #b91c1c; padding: 16px 20px; border-radius: 10px; 
             border: 1px solid #fca5a5; margin-bottom: 25px; font-size: 14px; font-weight: 500;
@@ -185,7 +165,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             display: flex; align-items: flex-start; gap: 12px;
         }
 
-        /* 新分类输入框特效 */
         #newCategoryInput {
             display: none; margin-top: 15px; border: 2px solid #ff8002; background: #fff7ed;
             animation: elasticUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
@@ -321,7 +300,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
     </div>
 
     <script>
-        // 高级图片预览交互
         const imgInput = document.getElementById('imgInput');
         const imagePreview = document.getElementById('imagePreview');
         const uploadLabel = document.getElementById('uploadLabel');
@@ -334,11 +312,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
                 reader.onload = function(e) {
                     imagePreview.src = e.target.result;
                     
-                    // 渐隐渐显过渡
                     uploadLabel.style.display = 'none'; 
                     imagePreview.style.opacity = 0;
                     imagePreview.style.display = 'block';
-                    uploadArea.style.padding = '20px'; // 调整内边距适应图片
+                    uploadArea.style.padding = '20px'; 
                     
                     setTimeout(() => {
                         imagePreview.style.transition = 'opacity 0.5s ease';
@@ -349,7 +326,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             }
         });
 
-        // 动态分类输入框逻辑
         function toggleCategoryInput() {
             const select = document.getElementById('categorySelect');
             const input = document.getElementById('newCategoryInput');
@@ -357,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_product'])) {
             if (select.value === '___NEW_CATEGORY___') {
                 input.style.display = 'block';
                 input.setAttribute('required', 'true');
-                setTimeout(() => input.focus(), 100); // 延迟对焦以确保动画顺畅
+                setTimeout(() => input.focus(), 100); 
             } else {
                 input.style.display = 'none';
                 input.removeAttribute('required');
