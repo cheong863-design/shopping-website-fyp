@@ -1,9 +1,7 @@
 <?php
-// 1. 初始化与数据库连接
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 include '../includes/db.php';
 
-// 2. 核心安全拦截
 if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) { 
     header("Location: ../login.php"); 
     exit(); 
@@ -11,10 +9,6 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
 
 $order_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $msg = "";
-
-// ==========================================
-// ✨ 核心功能：处理订单状态更新 & ETA 引擎
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $new_status = mysqli_real_escape_string($conn, $_POST['new_status']);
     
@@ -35,8 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         }
     }
 }
-
-// 3. 获取订单主表信息
 $order_query = mysqli_query($conn, "SELECT o.*, u.full_name as u_name, u.email, u.phone as u_phone FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = $order_id");
 $order = mysqli_fetch_assoc($order_query);
 
@@ -44,8 +36,6 @@ if (!$order) {
     header("Location: orders-mgt.php"); 
     exit(); 
 }
-
-// 4. 地址回退逻辑
 if (empty($order['address_line'])) {
     $addr_query = mysqli_query($conn, "SELECT * FROM user_addresses WHERE user_id = '{$order['user_id']}' AND is_default = 1 LIMIT 1");
     $default_addr = mysqli_fetch_assoc($addr_query);
@@ -64,7 +54,6 @@ if (empty($order['address_line'])) {
     $display_phone = $order['phone'];
 }
 
-// 5. 获取商品明细
 $items_query = mysqli_query($conn, "SELECT oi.*, p.name, p.image FROM order_items oi JOIN products p ON oi.product_id = p.id WHERE oi.order_id = $order_id");
 $items_array = [];
 $real_subtotal = 0;
@@ -94,10 +83,8 @@ $status_lower = strtolower($order['status']);
     <link rel="stylesheet" href="../assets/css/admin-style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
-        /* ========== 顶级 SaaS 动画与排版系统 ========== */
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #0f172a; }
         
-        /* 1. 核心入场动画 */
         @keyframes elasticUp {
             0% { opacity: 0; transform: translateY(30px) scale(0.98); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -113,7 +100,6 @@ $status_lower = strtolower($order['status']);
         
         .page-title h1 { margin: 0; font-family: 'Playfair Display', serif; font-size: 38px; font-style: italic; color: #0f172a; letter-spacing: -1px; }
         
-        /* 2. 卷宗主容器 */
         .dossier-card { 
             background: #fff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); 
             border: 1px solid rgba(226, 232, 240, 0.8); overflow: hidden;
@@ -121,7 +107,6 @@ $status_lower = strtolower($order['status']);
             position: relative;
         }
 
-        /* 盖章动画 (更新成功时触发) */
         .dossier-card.update-flash { animation: stampFlash 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes stampFlash { 0% { box-shadow: 0 0 0 4px #10b981, 0 20px 40px rgba(16,185,129,0.2); border-color: #10b981; } 100% { box-shadow: 0 10px 40px rgba(0,0,0,0.03); border-color: rgba(226, 232, 240, 0.8); } }
 
@@ -131,7 +116,6 @@ $status_lower = strtolower($order['status']);
         .order-ref { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin: 0; font-variant-numeric: tabular-nums; }
         .mono-date { font-family: monospace; font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 1px; }
 
-        /* 状态呼吸灯 */
         .status-badge { display: inline-flex; align-items: center; gap: 8px; font-family: monospace; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; padding: 10px 20px; border-radius: 8px; border: 1px solid currentColor; transition: 0.4s; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
         .status-pending { color: #d97706; background: #fffbeb; } .status-pending .status-dot { background: #d97706; animation: pulse 2s infinite; }
@@ -141,7 +125,6 @@ $status_lower = strtolower($order['status']);
         .status-delivered { color: #10b981; background: #ecfdf5; border-color: #10b981;} .status-delivered .status-dot { background: #10b981; }
         @keyframes pulse { 50% { opacity: 0.4; } }
 
-        /* 3. 级联信息栅格 */
         .dossier-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px dashed #e2e8f0; }
         .grid-panel { padding: 40px 50px; opacity: 0; animation: fadeFloat 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .grid-panel.left { border-right: 1px dashed #e2e8f0; animation-delay: 0.2s; }
@@ -156,7 +139,6 @@ $status_lower = strtolower($order['status']);
         .ib-address { font-size: 13px; color: #475569; line-height: 1.6; margin: 15px 0 0 0; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #f1f5f9; }
         .ib-phone { font-family: monospace; font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 10px; }
 
-        /* 4. 状态控制台与微动效 */
         .control-console { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; display: flex; flex-direction: column; gap: 20px; transition: 0.3s; }
         .control-console:focus-within { border-color: #cbd5e1; box-shadow: 0 10px 30px rgba(0,0,0,0.03); background: #fff; }
         .cc-warning { font-size: 11px; color: #64748b; line-height: 1.5; margin: 0; }
@@ -165,12 +147,10 @@ $status_lower = strtolower($order['status']);
         .custom-select:focus { border-color: #ff8002; box-shadow: 0 0 0 4px rgba(255,128,2,0.1); }
         .custom-select:disabled { background-color: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
 
-        /* 沉浸式提交按钮 */
         .btn-update { position: relative; background: #0f172a; color: #fff; border: none; width: 100%; padding: 16px; border-radius: 8px; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: 0.3s; overflow: hidden; }
         .btn-update:hover:not(:disabled) { background: #ff8002; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,128,2,0.2); }
         .btn-update:disabled { background: #cbd5e1; cursor: not-allowed; }
         
-        /* 按钮 Loading 状态 */
         .btn-update.is-loading { color: transparent; background: #cbd5e1; pointer-events: none; transform: translateY(0); box-shadow: none; }
         .btn-update.is-loading::after {
             content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
@@ -179,12 +159,10 @@ $status_lower = strtolower($order['status']);
         }
         @keyframes loadSweep { 100% { left: 200%; } }
 
-        /* ETA 提示块 */
         .eta-block { margin-top: 15px; padding: 12px 15px; background: #ecfdf5; border-left: 3px solid #10b981; border-radius: 0 8px 8px 0; animation: fadeFloat 0.5s ease forwards; }
         .eta-label { display: block; font-family: monospace; font-size: 9px; font-weight: 800; color: #047857; letter-spacing: 1px; margin-bottom: 4px; }
         .eta-value { font-size: 14px; font-weight: 700; color: #064e3b; }
 
-        /* 5. 级联物品清单 */
         .dossier-items { padding: 40px 50px; }
         .dossier-items .panel-title { opacity: 0; animation: fadeFloat 0.5s 0.4s forwards; }
         
@@ -195,7 +173,6 @@ $status_lower = strtolower($order['status']);
         .item-row:last-child { border-bottom: none; }
         .item-row:hover { background: #f8fafc; padding-left: 10px; padding-right: 10px; border-radius: 8px; border-color: transparent; }
         
-        /* 图片悬浮微距 */
         .item-img-wrap { width: 50px; height: 65px; background: #f8fafc; border-radius: 6px; padding: 5px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden; perspective: 100px; transition: 0.4s; }
         .item-img { width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) contrast(1.1); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         .item-row:hover .item-img-wrap { border-color: #cbd5e1; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
@@ -205,7 +182,6 @@ $status_lower = strtolower($order['status']);
         .item-qty { font-family: monospace; font-size: 12px; font-weight: 700; color: #64748b; text-align: center; }
         .item-price { font-family: monospace; font-size: 14px; font-weight: 800; color: #0f172a; text-align: right; }
 
-        /* 6. 财务核算 */
         .fin-ledger { background: #f8fafc; padding: 30px 50px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: flex-end; opacity: 0; animation: fadeFloat 0.6s 0.6s forwards; }
         .fin-box { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
         .fin-row { display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; font-weight: 600; color: #64748b; }
@@ -333,7 +309,6 @@ $status_lower = strtolower($order['status']);
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            // ✨ 1. 量子解密单号动效
             const decryptEl = document.querySelector('.js-quantum-decrypt');
             if (decryptEl) {
                 const finalStr = decryptEl.getAttribute('data-final');
@@ -355,8 +330,6 @@ $status_lower = strtolower($order['status']);
                     }
                 }, 30);
             }
-
-            // ✨ 2. 按钮 Loading 拦截
             const statusForm = document.getElementById('statusForm');
             if (statusForm) {
                 statusForm.addEventListener('submit', function() {
@@ -365,7 +338,6 @@ $status_lower = strtolower($order['status']);
                 });
             }
 
-            // ✨ 3. Toast 自动消失
             const toast = document.getElementById('sys-toast');
             if(toast) {
                 setTimeout(() => {
