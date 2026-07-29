@@ -46,9 +46,8 @@ The project was built to strengthen my understanding of full-stack web developme
 
 ### 🏠 Home Page
 
-> *(Insert screenshot here)*
 
-![Home](screenshots/home.png)
+![Home](screenshots/homepage.png)
 
 ---
 
@@ -62,7 +61,6 @@ The project was built to strengthen my understanding of full-stack web developme
 
 ### 🛒 Shopping Cart
 
-> *(Insert screenshot here)*
 
 ![Cart](screenshots/cart.png)
 
@@ -70,7 +68,6 @@ The project was built to strengthen my understanding of full-stack web developme
 
 ### 📊 Admin Dashboard
 
-> *(Insert screenshot here)*
 
 ![Dashboard](screenshots/dashboard.png)
 
@@ -78,7 +75,6 @@ The project was built to strengthen my understanding of full-stack web developme
 
 ### ⚙️ Product Management
 
-> *(Insert screenshot here)*
 
 ![Admin](screenshots/admin.png)
 
